@@ -1,0 +1,182 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Satz Injector</title>
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;background:#080b10;color:#e8f1f8;
+ font-family:Arial,sans-serif;padding:20px
+}
+main{max-width:650px;margin:30px auto}
+header{text-align:center;margin-bottom:25px}
+h1{color:#00e5ff;letter-spacing:2px}
+header p{color:#75889b}
+.card{
+ background:#111923;padding:20px;border-radius:16px;
+ border:1px solid #253647;margin-bottom:18px
+}
+label{display:block;color:#91a7bc;margin-bottom:8px}
+input,select{
+ width:100%;padding:13px;margin-bottom:15px;
+ border-radius:9px;border:1px solid #26394b;
+ background:#080e15;color:white
+}
+button{
+ padding:12px;border:0;border-radius:9px;
+ cursor:pointer;font-weight:bold
+}
+.generate{
+ width:100%;background:#00e5ff;color:#071117
+}
+.row{display:flex;gap:10px;margin-top:12px}
+.row button{flex:1;background:#243548;color:white}
+.item{
+ padding:12px;background:#0b131d;
+ border:1px solid #203244;border-radius:10px;
+ margin:10px 0;display:flex;gap:10px;
+ align-items:center;justify-content:space-between
+}
+.email{word-break:break-all;color:#61ddff}
+.item button{background:#20394c;color:#00e5ff}
+.small{color:#8294a8;font-size:12px}
+#list{max-height:450px;overflow:auto}
+footer{text-align:center;color:#647789;font-size:12px}
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1>SATZ INJECTOR</h1>
+<p>Gmail Alias Generator</p>
+</header>
+
+<section class="card">
+<label>Gmail utama</label>
+<input id="gmail" placeholder="nama@gmail.com" type="email">
+
+<label>Prefix alias</label>
+<input id="prefix" placeholder="satz">
+
+<label>Jumlah</label>
+<select id="count">
+<option value="10">10</option>
+<option value="20">20</option>
+<option value="30">30</option>
+<option value="50">50</option>
+<option value="100">100</option>
+</select>
+
+<button class="generate" onclick="generate()">GENERATE</button>
+
+<div class="row">
+<button onclick="copyAll()">COPY ALL</button>
+<button onclick="exportTxt()">EXPORT TXT</button>
+</div>
+</section>
+
+<section class="card">
+<label>Generated List</label>
+<div id="list"><p class="small">Belum ada hasil.</p></div>
+</section>
+
+<footer>Satz Injector • Vercel Edition</footer>
+</main>
+
+<script>
+let aliases=[];
+
+async function generate(){
+ const gmail=document.getElementById("gmail").value.trim();
+ const prefix=document.getElementById("prefix").value.trim();
+ const count=Number(document.getElementById("count").value);
+
+ if(!gmail){
+  alert("Masukkan Gmail!");
+  return;
+ }
+
+ try{
+  const res=await fetch("/api/generate",{
+   method:"POST",
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({gmail,prefix,count})
+  });
+
+  const data=await res.json();
+
+  if(!res.ok){
+   alert(data.error || "Gagal generate");
+   return;
+  }
+
+  aliases=data.aliases;
+  render();
+ }catch(e){
+  alert("Server tidak dapat dihubungi.");
+ }
+}
+
+function render(){
+ const list=document.getElementById("list");
+ list.innerHTML="";
+
+ aliases.forEach((email,i)=>{
+  const div=document.createElement("div");
+  div.className="item";
+
+  const left=document.createElement("div");
+  left.style.flex="1";
+
+  const num=document.createElement("div");
+  num.className="small";
+  num.textContent="Alias #"+(i+1);
+
+  const text=document.createElement("div");
+  text.className="email";
+  text.textContent=email;
+
+  left.append(num,text);
+
+  const btn=document.createElement("button");
+  btn.textContent="COPY";
+  btn.onclick=()=>copy(email);
+
+  div.append(left,btn);
+  list.appendChild(div);
+ });
+}
+
+async function copy(text){
+ try{
+  await navigator.clipboard.writeText(text);
+  alert("Disalin!");
+ }catch(e){
+  prompt("Salin manual:",text);
+ }
+}
+
+function copyAll(){
+ if(!aliases.length)return alert("Generate dahulu!");
+ copy(aliases.join("\n"));
+}
+
+function exportTxt(){
+ if(!aliases.length)return alert("Generate dahulu!");
+
+ const blob=new Blob([aliases.join("\n")],{
+  type:"text/plain"
+ });
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement("a");
+ a.href=url;
+ a.download="satz-alias.txt";
+ a.click();
+ URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
